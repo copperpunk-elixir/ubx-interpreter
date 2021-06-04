@@ -1,0 +1,10 @@
+{application,ubx_interpreter,
+             [{applications,[kernel,stdlib,elixir,logger,ring_logger,
+                             circuits_uart]},
+              {description,"ubx_interpreter"},
+              {modules,['Elixir.Common.Utils','Elixir.Common.Utils.Math',
+                        'Elixir.UbxInterpreter',
+                        'Elixir.UbxInterpreter.ByteTypes',
+                        'Elixir.UbxInterpreter.Utils']},
+              {registered,[]},
+              {vsn,"0.1.0"}]}.
