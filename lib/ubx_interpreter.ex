@@ -45,8 +45,6 @@ defmodule UbxInterpreter do
       msg_class = ubx.msg_class
       msg_id = ubx.msg_id
       payload = Enum.reverse(ubx.payload_rev)
-      # Logger.debug("Rx'd msg: #{msg_class}/#{msg_id}")
-      # Logger.debug("payload: #{inspect(payload(ubx))}")
       apply(process_fn, [msg_class, msg_id, payload] ++ additional_fn_args)
 
       clear(ubx)
@@ -62,8 +60,6 @@ defmodule UbxInterpreter do
 
     if ubx.payload_ready do
       payload = Enum.reverse(ubx.payload_rev)
-      # Logger.debug("Rx'd msg: #{msg_class}/#{msg_id}")
-      # Logger.debug("payload: #{inspect(payload(ubx))}")
       {ubx, payload}
     else
       {ubx, []}
@@ -91,7 +87,6 @@ defmodule UbxInterpreter do
   @spec parse_byte(struct(), integer()) :: struct()
   def parse_byte(ubx, byte) do
     state = ubx.state
-    # Logger.debug("state/byte/count: #{state}/#{byte}/#{ubx.count}")
 
     cond do
       state == @got_none and byte == @start_byte_1 ->
@@ -121,7 +116,6 @@ defmodule UbxInterpreter do
 
       state == @got_length1 ->
         msglen = ubx.msg_len + Bitwise.<<<(byte, 8)
-        # Logger.debug("msglen: #{msglen}")
         if msglen <= @max_payload_length do
           {chka, chkb} = add_to_checksum(ubx, byte)
           %{ubx | state: @got_length2, msg_len: msglen, count: 0, chka: chka, chkb: chkb}
@@ -139,18 +133,15 @@ defmodule UbxInterpreter do
 
       state == @got_payload ->
         state = if byte == ubx.chka, do: @got_chka, else: @got_none
-        # if (state == @got_none), do: Logger.warn("bad a")
         %{ubx | state: state}
 
       state == @got_chka ->
         state = @got_none
         payload_ready = if byte == ubx.chkb, do: true, else: false
-        # if (!payload_ready), do: Logger.warn("bad b")
         %{ubx | state: state, payload_ready: payload_ready}
 
       true ->
-        # Garbage byte
-        # Logger.warn("parse unexpected condition")
+        # This byte is out of place
         %{ubx | state: @got_none}
     end
   end

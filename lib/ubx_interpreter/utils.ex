@@ -1,5 +1,6 @@
 defmodule UbxInterpreter.Utils do
   require Logger
+  use Bitwise
 
   @spec deconstruct_message(list(), list()) :: list()
   def deconstruct_message(byte_types, payload) do
@@ -9,16 +10,16 @@ defmodule UbxInterpreter.Utils do
         bytes_abs = abs(bytes) |> round()
         {buffer, remaining_buffer} = Enum.split(remaining_buffer, bytes_abs)
 
-        value = Common.Utils.list_to_int(buffer, bytes_abs)
+        value = UtilsEnum.list_to_int(buffer, bytes_abs)
 
         value =
           if is_float(bytes) do
-            Common.Utils.Math.fp_from_uint(value, bytes_abs * 8)
+            UtilsMath.fp_from_uint(value, bytes_abs * 8)
           else
             if bytes > 0 do
               value
             else
-              Common.Utils.Math.twos_comp(value, bytes_abs * 8)
+              UtilsMath.twos_comp(value, bytes_abs * 8)
             end
           end
 
@@ -36,16 +37,16 @@ defmodule UbxInterpreter.Utils do
 
         value_bin =
           if is_float(bytes) do
-            Common.Utils.Math.uint_from_fp(value, round(bytes_abs * 8))
+            UtilsMath.uint_from_fp(value, round(bytes_abs * 8))
           else
-            Common.Utils.Math.int_little_bin(value, bytes_abs * 8)
+            UtilsMath.int_little_bin(value, bytes_abs * 8)
           end
 
         {payload <> value_bin, payload_length + bytes_abs}
       end)
 
-    payload_len_msb = Bitwise.>>>(payload_length, 8) |> Bitwise.&&&(0xFF)
-    payload_len_lsb = Bitwise.&&&(payload_length, 0xFF)
+    payload_len_msb = (payload_length >>> 8) &&& (0xFF)
+    payload_len_lsb = (payload_length &&& 0xFF)
     checksum_buffer = <<msg_class, msg_id, payload_len_lsb, payload_len_msb>> <> payload
     checksum = calculate_ubx_checksum(:binary.bin_to_list(checksum_buffer))
     <<0xB5, 0x62>> <> checksum_buffer <> checksum
@@ -56,8 +57,8 @@ defmodule UbxInterpreter.Utils do
     payload_list = :binary.bin_to_list(payload)
     payload_length = length(payload_list)
     # Logger.debug("payload len: #{payload_length}")
-    payload_len_msb = Bitwise.>>>(payload_length, 8) |> Bitwise.&&&(0xFF)
-    payload_len_lsb = Bitwise.&&&(payload_length, 0xFF)
+    payload_len_msb = (payload_length >>> 8) &&& (0xFF)
+    payload_len_lsb = (payload_length &&& 0xFF)
     # Logger.debug("msb/lsb: #{payload_len_msb}/#{payload_len_lsb}")
     checksum_buffer = [msg_class, msg_id, payload_len_lsb, payload_len_msb] ++ payload_list
     checksum = calculate_ubx_checksum(checksum_buffer)
@@ -70,7 +71,7 @@ defmodule UbxInterpreter.Utils do
       Enum.reduce(buffer, {0, 0}, fn x, {ck_a, ck_b} ->
         ck_a = ck_a + x
         ck_b = ck_b + ck_a
-        {Bitwise.&&&(ck_a, 0xFF), Bitwise.&&&(ck_b, 0xFF)}
+        {(ck_a &&& 0xFF), (ck_b &&& 0xFF)}
       end)
     <<ck_a, ck_b>>
   end

@@ -22,7 +22,14 @@ defmodule UbxInterpreter.MixProject do
   defp deps do
     [
       {:ring_logger, "~> 0.8.1"},
-      {:circuits_uart, "~> 1.4.2"}
+      {:circuits_uart, "~> 1.4.2"},
+      {:utils_math,
+       path: "/home/ubuntu/Documents/Github/cp-elixir/libraries/all-utils/utils_math"},
+      {:utils_format,
+       path: "/home/ubuntu/Documents/Github/cp-elixir/libraries/all-utils/utils_format"},
+      {:utils_enum,
+       path: "/home/ubuntu/Documents/Github/cp-elixir/libraries/all-utils/utils_enum"}
+
       # {:dep_from_hexpm, "~> 0.3.0"},
       # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"}
     ]
