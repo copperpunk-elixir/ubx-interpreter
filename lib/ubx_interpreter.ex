@@ -2,7 +2,7 @@ defmodule UbxInterpreter do
   @moduledoc """
   Documentation for `UbxInterpreter`.
   """
-
+  alias UbxInterpreter.Utils, as: Utils
   require Logger
   use Bitwise
 
@@ -116,6 +116,7 @@ defmodule UbxInterpreter do
 
       state == @got_length1 ->
         msglen = ubx.msg_len + Bitwise.<<<(byte, 8)
+
         if msglen <= @max_payload_length do
           {chka, chkb} = add_to_checksum(ubx, byte)
           %{ubx | state: @got_length2, msg_len: msglen, count: 0, chka: chka, chkb: chkb}
@@ -167,4 +168,16 @@ defmodule UbxInterpreter do
   def msg_class_and_id(ubx) do
     {ubx.msg_class, ubx.msg_id}
   end
+
+  @spec deconstruct_message(list(), list(), list(), list()) :: map()
+  defdelegate deconstruct_message(byte_types, multipliers, keys, payload), to: Utils
+
+  @spec construct_message(integer(), integer(), list(), list()) :: binary()
+  defdelegate construct_message(msg_class, msg_id, byte_types, values), to: Utils
+
+  @spec construct_proto_message(integer(), integer(), binary()) :: binary()
+  defdelegate construct_proto_message(msg_class, msg_id, payload), to: Utils
+
+  @spec calculate_ubx_checksum(list()) :: binary()
+  defdelegate calculate_ubx_checksum(buffer), to: Utils
 end
