@@ -1,4 +1,4 @@
-defmodule UbxInterpreterTest do
+defmodule ConstructAndProcessList do
   use ExUnit.Case
   require UbxInterpreter.ByteTypes, as: BT
   require Logger
@@ -20,17 +20,17 @@ defmodule UbxInterpreterTest do
 
     values = [3, 4, -5, 6, 7.01, -8.02]
     multipliers = List.duplicate(1, length(values))
-    keys = Enum.to_list(1..length(values)+1)
-    msg = UbxInterpreter.Utils.construct_message(msg_class, msg_id, byte_types, values)
+    msg = UbxInterpreter.Utils.construct_message_from_list(msg_class, msg_id, byte_types, values)
 
     # Act as though we just received this message in binary form (like we would with UART)
     rx_data = :binary.bin_to_list(msg)
     {_ubx, payload} = UbxInterpreter.check_for_new_message(ubx, rx_data)
-    values_rx = UbxInterpreter.Utils.deconstruct_message(byte_types, multipliers, keys, payload)
+    values_rx = UbxInterpreter.Utils.deconstruct_message_to_list(byte_types, multipliers, payload)
 
-    Enum.each(values_rx, fn {key, value} ->
-      key_index = Enum.find_index(keys, fn x -> key == x end)
-      assert_in_delta(value, Enum.at(values, key_index) * Enum.at(multipliers, key_index), 0.001)
+    Enum.each(Enum.with_index(values_rx), fn {value, index} ->
+      expected_value = Enum.at(values, index) * Enum.at(multipliers, index)
+      Logger.debug("value/rx_value: #{expected_value}/#{value}")
+      assert_in_delta(value, expected_value, 0.001)
     end)
   end
 end

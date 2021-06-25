@@ -2,21 +2,19 @@ defmodule UbxInterpreter.Utils do
   require Logger
   use Bitwise
 
-    @spec deconstruct_message(list(), list(), list(), list()) :: map()
-  def deconstruct_message(byte_types, multipliers, keys, payload) do
-    # byte_types = get_bytes_for_msg(msg_type)
-    {_payload_rem, _multipliers, _keys, values} =
-      Enum.reduce(byte_types, {payload, multipliers, keys, %{}}, fn bytes,
+   @spec deconstruct_message_to_list(list(), list(), list()) :: list()
+  def deconstruct_message_to_list(byte_types, multipliers, payload) do
+     {_payload_rem, _multipliers, values_reversed} =
+      Enum.reduce(byte_types, {payload, multipliers, []}, fn bytes,
                                                                     {remaining_buffer,
                                                                      remaining_multipliers,
-                                                                     remaining_keys, values} ->
+                                                                     values_reversed} ->
         bytes_abs = abs(bytes) |> round()
         {buffer, remaining_buffer} = Enum.split(remaining_buffer, bytes_abs)
         [multiplier | remaining_multipliers] = remaining_multipliers
-        [key | remaining_keys] = remaining_keys
 
-        if multiplier == 0 or is_nil(key) do
-          {remaining_buffer, remaining_multipliers, remaining_keys, values}
+        if multiplier == 0 do
+          {remaining_buffer, remaining_multipliers, values_reversed}
         else
           value = ViaUtils.Enum.list_to_int(buffer, bytes_abs)
 
@@ -32,15 +30,75 @@ defmodule UbxInterpreter.Utils do
             end
             |> Kernel.*(multiplier)
 
-          {remaining_buffer, remaining_multipliers, remaining_keys, Map.put(values, key, value)}
+          {remaining_buffer, remaining_multipliers, [value] ++ values_reversed}
         end
       end)
 
-    values
+    Enum.reverse(values_reversed)
   end
 
-  @spec construct_message(integer(), integer(), list(), list()) :: binary()
-  def construct_message(msg_class, msg_id, byte_types, values) do
+  @spec deconstruct_message_to_map(list(), list(), list(), list()) :: map()
+  def deconstruct_message_to_map(byte_types, multipliers, keys, payload) do
+    values= deconstruct_message_to_list(byte_types, multipliers, payload)
+    Enum.zip(keys, values) |> Enum.into(%{})
+  end
+
+  # @spec deconstruct_message(list(), list(), list(), list()) :: map()
+  # def deconstruct_message(byte_types, multipliers, keys, payload) do
+  #   # byte_types = get_bytes_for_msg(msg_type)
+  #   {_payload_rem, _multipliers, _keys, values} =
+  #     Enum.reduce(byte_types, {payload, multipliers, keys, %{}}, fn bytes,
+  #                                                                   {remaining_buffer,
+  #                                                                    remaining_multipliers,
+  #                                                                    remaining_keys, values} ->
+  #       bytes_abs = abs(bytes) |> round()
+  #       {buffer, remaining_buffer} = Enum.split(remaining_buffer, bytes_abs)
+  #       [multiplier | remaining_multipliers] = remaining_multipliers
+  #       [key | remaining_keys] = remaining_keys
+
+  #       if multiplier == 0 or is_nil(key) do
+  #         {remaining_buffer, remaining_multipliers, remaining_keys, values}
+  #       else
+  #         value = ViaUtils.Enum.list_to_int(buffer, bytes_abs)
+
+  #         value =
+  #           if is_float(bytes) do
+  #             ViaUtils.Math.fp_from_uint(value, bytes_abs * 8)
+  #           else
+  #             if bytes > 0 do
+  #               value
+  #             else
+  #               ViaUtils.Math.twos_comp(value, bytes_abs * 8)
+  #             end
+  #           end
+  #           |> Kernel.*(multiplier)
+
+  #         {remaining_buffer, remaining_multipliers, remaining_keys, Map.put(values, key, value)}
+  #       end
+  #     end)
+
+  #   values
+  # end
+
+  @spec construct_message_from_map(integer(), integer(), list(), list(), list(), map()) :: binary()
+  def construct_message_from_map(msg_class, msg_id, byte_types, multipliers, keys, values_map) do
+    {_remaining_values_map, _remaining_multipliers, values_list_reversed} =
+      Enum.reduce(keys, {values_map, multipliers, []}, fn key,
+                                                          {remaining_values_map,
+                                                           remaining_multipliers,
+                                                           values_reversed} ->
+        [multiplier | remaining_multipliers] = remaining_multipliers
+        {value_raw, remaining_values_map} = Map.pop(remaining_values_map, key)
+        # Logger.debug("key,raw,mult: #{key},#{value_raw},#{multiplier}")
+        value = round(value_raw / multiplier)
+        {remaining_values_map, remaining_multipliers, [value] ++ values_reversed}
+      end)
+
+    construct_message_from_list(msg_class, msg_id, byte_types, Enum.reverse(values_list_reversed))
+  end
+
+  @spec construct_message_from_list(integer(), integer(), list(), list()) :: binary()
+  def construct_message_from_list(msg_class, msg_id, byte_types, values) do
     {payload, payload_length} =
       Enum.reduce(Enum.zip(values, byte_types), {<<>>, 0}, fn {value, bytes},
                                                               {payload, payload_length} ->

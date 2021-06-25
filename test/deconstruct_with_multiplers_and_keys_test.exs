@@ -1,4 +1,4 @@
-defmodule DeconstructWithMultipliersAndKeys do
+defmodule DeconstructWithMultipliersAndKeysTest do
   use ExUnit.Case
   require Logger
 

@@ -169,11 +169,26 @@ defmodule UbxInterpreter do
     {ubx.msg_class, ubx.msg_id}
   end
 
-  @spec deconstruct_message(list(), list(), list(), list()) :: map()
-  defdelegate deconstruct_message(byte_types, multipliers, keys, payload), to: Utils
+  @spec deconstruct_message_to_map(list(), list(), list(), list()) :: map()
+  defdelegate deconstruct_message_to_map(byte_types, multipliers, keys, payload), to: Utils
 
-  @spec construct_message(integer(), integer(), list(), list()) :: binary()
-  defdelegate construct_message(msg_class, msg_id, byte_types, values), to: Utils
+    @spec deconstruct_message_to_list(list(), list(), list()) :: list()
+  defdelegate deconstruct_message_to_list(byte_types, multipliers, payload), to: Utils
+
+  @spec construct_message_from_map(integer(), integer(), list(), list(), list(), map()) ::
+          binary()
+  defdelegate construct_message_from_map(
+                msg_class,
+                msg_id,
+                byte_types,
+                multipliers,
+                key,
+                values_map
+              ),
+              to: Utils
+
+  @spec construct_message_from_list(integer(), integer(), list(), list()) :: binary()
+  defdelegate construct_message_from_list(msg_class, msg_id, byte_types, values_list), to: Utils
 
   @spec construct_proto_message(integer(), integer(), binary()) :: binary()
   defdelegate construct_proto_message(msg_class, msg_id, payload), to: Utils
