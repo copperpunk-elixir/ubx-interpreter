@@ -2,13 +2,13 @@ defmodule UbxInterpreter.Utils do
   require Logger
   use Bitwise
 
-   @spec deconstruct_message_to_list(list(), list(), list()) :: list()
+  @spec deconstruct_message_to_list(list(), list(), list()) :: list()
   def deconstruct_message_to_list(byte_types, multipliers, payload) do
-     {_payload_rem, _multipliers, values_reversed} =
+    {_payload_rem, _multipliers, values_reversed} =
       Enum.reduce(byte_types, {payload, multipliers, []}, fn bytes,
-                                                                    {remaining_buffer,
-                                                                     remaining_multipliers,
-                                                                     values_reversed} ->
+                                                             {remaining_buffer,
+                                                              remaining_multipliers,
+                                                              values_reversed} ->
         bytes_abs = abs(bytes) |> round()
         {buffer, remaining_buffer} = Enum.split(remaining_buffer, bytes_abs)
         [multiplier | remaining_multipliers] = remaining_multipliers
@@ -39,14 +39,14 @@ defmodule UbxInterpreter.Utils do
 
   @spec deconstruct_message_to_map(list(), list(), list(), list()) :: map()
   def deconstruct_message_to_map(byte_types, multipliers, keys, payload) do
-    values= deconstruct_message_to_list(byte_types, multipliers, payload)
+    values = deconstruct_message_to_list(byte_types, multipliers, payload)
     Enum.zip(keys, values) |> Enum.into(%{})
   end
 
   # @spec deconstruct_message(list(), list(), list(), list()) :: map()
   # def deconstruct_message(byte_types, multipliers, keys, payload) do
   #   # byte_types = get_bytes_for_msg(msg_type)
-  #   {_payload_rem, _multipliers, _keys, values} =
+  #   {_payload_rem, _multipliers, _keys, values}
   #     Enum.reduce(byte_types, {payload, multipliers, keys, %{}}, fn bytes,
   #                                                                   {remaining_buffer,
   #                                                                    remaining_multipliers,
@@ -80,7 +80,8 @@ defmodule UbxInterpreter.Utils do
   #   values
   # end
 
-  @spec construct_message_from_map(integer(), integer(), list(), list(), list(), map()) :: binary()
+  @spec construct_message_from_map(integer(), integer(), list(), list(), list(), map()) ::
+          binary()
   def construct_message_from_map(msg_class, msg_id, byte_types, multipliers, keys, values_map) do
     {_remaining_values_map, _remaining_multipliers, values_list_reversed} =
       Enum.reduce(keys, {values_map, multipliers, []}, fn key,
