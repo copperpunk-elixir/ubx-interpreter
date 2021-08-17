@@ -1,10 +1,12 @@
 defmodule UbxInterpreter do
-  @moduledoc """
-  Documentation for `UbxInterpreter`.
-  """
   alias UbxInterpreter.Utils, as: Utils
   require Logger
   use Bitwise
+
+  @moduledoc """
+  Constructs or deconstructs messages that conform to U-blox UBX binary protocol.
+  NOTE: This documentation is incomplete. It will be finished as soon as possible.
+  """
 
   @max_payload_length 1000
 
@@ -21,6 +23,7 @@ defmodule UbxInterpreter do
   @got_payload 7
   @got_chka 8
 
+  @doc false
   defstruct state: @got_none,
             msg_class: -1,
             msg_id: -1,
@@ -32,11 +35,64 @@ defmodule UbxInterpreter do
             payload_ready: false,
             remaining_data: []
 
+  # Public API
+  @doc """
+  Create a new UbxInterpreter struct that can parse new data and
+  store the most recently received output.
+  """
   @spec new() :: struct()
   def new() do
     %UbxInterpreter{}
   end
 
+  @doc """
+  Appends the latest data to any leftover data from the previous `check_for_new_message` operation.
+
+  Arguments are the `%UbxInterpreter{}` struct and the newest data from the whichever source this struct is associated (must already by converted from binary to list).
+
+  Returns `{%UbxInterpreter{}, [list of payload bytes]}`. If no valid UBX message was found, the payload list will be empty.
+  This list is the raw payload contents. In order to convert to usable values, the `deconstruct_message_to_map` or `deconstruct_message_to_list` function must be called.
+
+  NOTE: After a valid message has been received, the `clear` function must be called if you do not want the payload values to persist.
+  Otherwise this function will continue to return a populated payload list even if a new valid message has not been received.
+
+  Example:
+  ```
+  {ubx_interpreter, payload_list} = UbxInterpreter.check_for_new_message(ubx_interpreter, new_data_list)
+  values_list = deconstruct_message_to_list(byte_types_list, multipliers_list, payload_list)
+  ubx_interpreter = UbxInterpreter.clear(ubx_interpreter)
+  ```
+  """
+  @spec check_for_new_message(struct(), list()) :: tuple()
+  def check_for_new_message(ubx, data) do
+    ubx = parse_data(ubx, data)
+
+    if ubx.payload_ready do
+      payload = Enum.reverse(ubx.payload_rev)
+      {ubx, payload}
+    else
+      {ubx, []}
+    end
+  end
+
+  @doc """
+  Similar to `check_for_new_message`, expect if a valid message is found, the `process_fn` function will be called. The arguments
+  passed to `process_fn` include the message class, message ID, and the message payload, plus any `additional_fn_args`.
+
+  This makes it easier to parse and process multiple messages contained within the same data stream. For example, you might have a GPS receiver that is outputing
+  two different messages, and you want to send the contents of each message to a different GenServer.
+
+  Example:
+  ```
+   ubx_interpreter =
+      UbxInterpreter.check_for_new_messages_and_process(
+        ubx_interpreter,
+        data_list,
+        &process_data_fn/3,
+        []
+      )
+  ```
+  """
   @spec check_for_new_messages_and_process(struct(), list(), fun(), list()) :: struct()
   def check_for_new_messages_and_process(ubx, data, process_fn, additional_fn_args \\ []) do
     ubx = parse_data(ubx, data)
@@ -54,18 +110,7 @@ defmodule UbxInterpreter do
     end
   end
 
-  @spec check_for_new_message(struct(), list()) :: tuple()
-  def check_for_new_message(ubx, data) do
-    ubx = parse_data(ubx, data)
-
-    if ubx.payload_ready do
-      payload = Enum.reverse(ubx.payload_rev)
-      {ubx, payload}
-    else
-      {ubx, []}
-    end
-  end
-
+  @doc false
   @spec parse_data(struct(), list()) :: struct()
   def parse_data(ubx, data) do
     data = ubx.remaining_data ++ data
@@ -84,6 +129,7 @@ defmodule UbxInterpreter do
     end
   end
 
+  @doc false
   @spec parse_byte(struct(), integer()) :: struct()
   def parse_byte(ubx, byte) do
     state = ubx.state
@@ -147,6 +193,7 @@ defmodule UbxInterpreter do
     end
   end
 
+  @doc false
   @spec add_to_checksum(struct(), integer()) :: tuple()
   def add_to_checksum(ubx, byte) do
     chka = Bitwise.&&&(ubx.chka + byte, 0xFF)
@@ -154,25 +201,55 @@ defmodule UbxInterpreter do
     {chka, chkb}
   end
 
+  @doc false
   @spec payload(struct()) :: list()
   def payload(ubx) do
     Enum.reverse(ubx.payload_rev)
   end
 
+  @doc """
+  Empties the stored payload list
+  """
   @spec clear(struct()) :: struct()
   def clear(ubx) do
     %{ubx | payload_ready: false}
   end
 
+  @doc false
   @spec msg_class_and_id(struct()) :: tuple()
   def msg_class_and_id(ubx) do
     {ubx.msg_class, ubx.msg_id}
   end
 
+  @doc """
+  Converts a list of payload bytes to a map containing usable values. The message contents are defined according to the `byte_types` and `multipliers` arguments.
+
+  First the payload is split up into a list of values, separated according to their lenght in bytes.<br>Acceptable `byte_types` values and their corresponding primitive data type are as follows:
+  * 1 (uint8)
+  * 2 (uint16)
+  * 4 (uint32)
+  * 8 (uint64)
+  * -1 (int8)
+  * -2 (int16)
+  * -4 (int32)
+  * -8 (int64)
+  * 4.0 (float)
+  * 8.0 (double)
+
+  NOTE: UBX messages do not typically contain `float` or `double` values represented in single-precision or double-precision form. Rather they use integer values with known multiplier to
+  convert them to their decimal values. However, there is no reason we can't store them like this, so if you want to make a custom UBX message that uses `float` or `double`, go for it!
+
+  Once each value has been converted from a list of bytes to an `integer`, `float`, or `double`, it is then multiplied by the corresponding number in the `multipliers` list.
+
+  Finally it is stored in a map using the key specified by the `keys` list.
+
+  Example:
+  -coming soon-
+  """
   @spec deconstruct_message_to_map(list(), list(), list(), list()) :: map()
   defdelegate deconstruct_message_to_map(byte_types, multipliers, keys, payload), to: Utils
 
-    @spec deconstruct_message_to_list(list(), list(), list()) :: list()
+  @spec deconstruct_message_to_list(list(), list(), list()) :: list()
   defdelegate deconstruct_message_to_list(byte_types, multipliers, payload), to: Utils
 
   @spec construct_message_from_map(integer(), integer(), list(), list(), list(), map()) ::
