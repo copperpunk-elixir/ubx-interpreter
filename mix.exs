@@ -7,7 +7,7 @@ defmodule UbxInterpreter.MixProject do
   def project do
     [
       app: :ubx_interpreter,
-      version: "0.1.0",
+      version: @version,
       elixir: "~> 1.11",
       description: description(),
       package: package(),
