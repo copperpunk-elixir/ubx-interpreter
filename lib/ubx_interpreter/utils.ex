@@ -43,53 +43,17 @@ defmodule UbxInterpreter.Utils do
     Enum.zip(keys, values) |> Enum.into(%{})
   end
 
-  # @spec deconstruct_message(list(), list(), list(), list()) :: map()
-  # def deconstruct_message(byte_types, multipliers, keys, payload) do
-  #   # byte_types = get_bytes_for_msg(msg_type)
-  #   {_payload_rem, _multipliers, _keys, values}
-  #     Enum.reduce(byte_types, {payload, multipliers, keys, %{}}, fn bytes,
-  #                                                                   {remaining_buffer,
-  #                                                                    remaining_multipliers,
-  #                                                                    remaining_keys, values} ->
-  #       bytes_abs = abs(bytes) |> round()
-  #       {buffer, remaining_buffer} = Enum.split(remaining_buffer, bytes_abs)
-  #       [multiplier | remaining_multipliers] = remaining_multipliers
-  #       [key | remaining_keys] = remaining_keys
-
-  #       if multiplier == 0 or is_nil(key) do
-  #         {remaining_buffer, remaining_multipliers, remaining_keys, values}
-  #       else
-  #         value = ViaUtils.Enum.list_to_int(buffer, bytes_abs)
-
-  #         value =
-  #           if is_float(bytes) do
-  #             ViaUtils.Math.fp_from_uint(value, bytes_abs * 8)
-  #           else
-  #             if bytes > 0 do
-  #               value
-  #             else
-  #               ViaUtils.Math.twos_comp(value, bytes_abs * 8)
-  #             end
-  #           end
-  #           |> Kernel.*(multiplier)
-
-  #         {remaining_buffer, remaining_multipliers, remaining_keys, Map.put(values, key, value)}
-  #       end
-  #     end)
-
-  #   values
-  # end
-
   @spec construct_message_from_map(integer(), integer(), list(), list(), list(), map()) ::
           binary()
   def construct_message_from_map(msg_class, msg_id, byte_types, multipliers, keys, values_map) do
+    # Logger.debug("value-Map: #{inspect(values_map)}")
     {_remaining_values_map, _remaining_multipliers, values_list_reversed} =
       Enum.reduce(keys, {values_map, multipliers, []}, fn key,
                                                           {remaining_values_map,
                                                            remaining_multipliers,
                                                            values_reversed} ->
         [multiplier | remaining_multipliers] = remaining_multipliers
-        {value_raw, remaining_values_map} = Map.pop(remaining_values_map, key)
+        {value_raw, remaining_values_map} = Map.pop(remaining_values_map, key, 0)
         # Logger.debug("key,raw,mult: #{key},#{value_raw},#{multiplier}")
         value = round(value_raw / multiplier)
         {remaining_values_map, remaining_multipliers, [value] ++ values_reversed}

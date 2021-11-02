@@ -221,6 +221,11 @@ defmodule UbxInterpreter do
     {ubx.msg_class, ubx.msg_id}
   end
 
+  @spec payload_length(struct()) :: integer()
+  def payload_length(ubx) do
+    ubx.msg_len
+  end
+
   @doc """
   Converts a list of payload bytes to a map containing usable values. The message contents are defined according to the `byte_types` and `multipliers` arguments.
 
