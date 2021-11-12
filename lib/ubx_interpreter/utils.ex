@@ -16,7 +16,7 @@ defmodule UbxInterpreter.Utils do
         if multiplier == 0 do
           {remaining_buffer, remaining_multipliers, values_reversed}
         else
-          value = ViaUtils.Enum.list_to_int(buffer, bytes_abs)
+          value = ViaUtils.Enum.list_to_int_little_end(buffer)
 
           value =
             if is_float(bytes) do

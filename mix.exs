@@ -42,7 +42,9 @@ defmodule UbxInterpreter.MixProject do
       {:ex_doc, "~> 0.24", only: :dev, runtime: false},
       {:ring_logger, "~> 0.8.1"},
       {:circuits_uart, "~> 1.4.2"},
-      {:via_utils, "~> 0.2.0"}
+      {:via_utils,
+       path: "/home/ubuntu/Documents/Github/cp-elixir/libraries/via-utils"}
+      # {:via_utils, "~> 0.2.0"}
       # {:dep_from_hexpm, "~> 0.3.0"},
       # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"}
     ]
